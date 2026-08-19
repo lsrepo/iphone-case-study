@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { fetchPaymentStatus } from "../../../lib/api";
 
 export default function SuccessPage() {
+  return (
+    <Suspense fallback={<p>Confirming your payment…</p>}>
+      <SuccessPageContent />
+    </Suspense>
+  );
+}
+
+function SuccessPageContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id");
   const [status, setStatus] = useState<string | null>(null);
