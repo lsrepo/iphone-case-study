@@ -1,0 +1,32 @@
+/* frontend/app/globals.css */
+:root {
+  --color-dark-olive: #323416;
+  --color-sage: #8c9e6e;
+  --color-off-white: #fffffd;
+}
+
+body {
+  background: var(--color-off-white);
+  color: var(--color-dark-olive);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 0;
+}
+
+a {
+  color: var(--color-dark-olive);
+}
+
+button {
+  background: var(--color-sage);
+  color: var(--color-dark-olive);
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
