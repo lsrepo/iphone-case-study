@@ -48,7 +48,8 @@ def test_webhook_updates_order_to_declined_on_payment_declined():
 
 
 def test_webhook_rejects_invalid_signature():
-    body = json.dumps({"type": "payment_approved", "data": {"reference": "order-1"}}).encode()
+    order_store.create("order-3", "HK", "HKD", 25000, [BasketItem(product_id="clear-case", quantity=1)])
+    body = json.dumps({"type": "payment_approved", "data": {"reference": "order-3"}}).encode()
 
     response = client.post(
         "/api/webhooks/checkout",
@@ -57,3 +58,16 @@ def test_webhook_rejects_invalid_signature():
     )
 
     assert response.status_code == 401
+    assert order_store.get("order-3").status == "pending"
+
+
+def test_webhook_rejects_malformed_json_with_valid_signature():
+    body = b"not-valid-json{{{"
+
+    response = client.post(
+        "/api/webhooks/checkout",
+        content=body,
+        headers={"Cko-Signature": _sign(body), "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 400
