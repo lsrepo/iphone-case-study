@@ -17,8 +17,7 @@ without the backend ever seeing raw card data.
 - Python 3.11+
 - Node.js 20+
 - A Checkout.com sandbox account with a public key, secret key, and webhook
-  signing secret (see "Getting sandbox credentials" below if you don't have
-  these yet).
+  signing secret.
 
 ## Setup
 
