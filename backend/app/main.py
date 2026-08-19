@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import products
+from app.routers import payments, products
 
 app = FastAPI(title="iPhone Case Study Checkout API")
 
@@ -13,3 +13,4 @@ app.add_middleware(
 )
 
 app.include_router(products.router)
+app.include_router(payments.router)
