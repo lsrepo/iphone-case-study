@@ -58,6 +58,12 @@ export default function CheckoutPage() {
     routerRef.current.push(`/checkout/success?order_id=${orderId}&outcome=success&payment_id=${paymentId}`);
   }, []);
 
+  const handlePaymentDeclined = useCallback((paymentId: string, reason?: string) => {
+    const orderId = window.sessionStorage.getItem("orderId");
+    const reasonParam = reason ? `&reason=${encodeURIComponent(reason)}` : "";
+    routerRef.current.push(`/checkout/success?order_id=${orderId}&outcome=failure&payment_id=${paymentId}${reasonParam}`);
+  }, []);
+
   const handleFlowError = useCallback((message: string) => {
     setError(message);
   }, []);
@@ -72,7 +78,12 @@ export default function CheckoutPage() {
         </p>
       )}
       {Boolean(paymentSession) && (
-        <CheckoutFlowMount paymentSession={paymentSession} onPaymentCompleted={handlePaymentCompleted} onError={handleFlowError} />
+        <CheckoutFlowMount
+          paymentSession={paymentSession}
+          onPaymentCompleted={handlePaymentCompleted}
+          onPaymentDeclined={handlePaymentDeclined}
+          onError={handleFlowError}
+        />
       )}
     </main>
   );

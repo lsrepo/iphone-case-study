@@ -44,27 +44,34 @@ npm run dev
 
 Open http://localhost:3000 — it redirects to `/cart`.
 
-### 3. Webhooks (needed for order status to update)
+### 3. Order status: how the success page knows the outcome
 
-Checkout.com needs to reach `POST /api/webhooks/checkout` on your backend. For
-local development, expose it with a tunnel and add
+Checkout.com Flow reports the outcome directly to the browser — there's no
+polling and no webhook needed for the customer-facing flow:
+
+- A successful payment fires Flow's `onPaymentCompleted` callback with the
+  payment ID (`status` is always `"Approved"` there — Flow only calls this on
+  success).
+- A declined card fires `onError` with `code: "payment_request_declined"`,
+  which carries the payment ID and a decline reason (e.g.
+  `not_enough_funds`, `try_again`).
+
+The checkout page redirects straight to `/checkout/success` with the outcome
+already known (`outcome=success` or `outcome=failure&reason=...`), so that
+page just renders it — it doesn't ask the backend and wait.
+
+**Webhooks are optional**, for backend record-keeping only (e.g. if
+Checkout.com redirects the browser back after a 3DS challenge without going
+through Flow's callbacks, or if you want the backend's order store to reflect
+the outcome asynchronously). `POST /api/webhooks/checkout` handles this if
+you set it up: expose your backend with a tunnel, add
 `https://<your-tunnel>/api/webhooks/checkout` as a webhook endpoint in the
-Checkout.com sandbox Dashboard, subscribed to at least: `payment_approved`,
-`payment_captured`, `payment_declined`, `payment_failed`, `payment_expired`.
-Copy the webhook's signing secret into `backend/.env` as
-`CHECKOUT_WEBHOOK_SECRET`.
-
-`scripts/start-tunnel.sh` automates the tunnel side of this: it starts ngrok
-for the backend (and the frontend, for Apple Pay), prints both HTTPS URLs, and
-can write them straight into your `.env` files with `--update-env`. Requires
-`ngrok` installed and authenticated once (`ngrok config add-authtoken ...`).
-Run `scripts/start-tunnel.sh --help` for options.
-
-If you're also tunneling the *frontend* (e.g. for Apple Pay testing, see
-below), update `FRONTEND_BASE_URL` in `backend/.env` and
-`NEXT_PUBLIC_API_BASE_URL` in `frontend/.env.local` to the tunnel's HTTPS
-URLs too — not just the webhook endpoint — otherwise CORS will block the
-frontend's calls to the backend.
+Checkout.com sandbox Dashboard, subscribe to `payment_approved`,
+`payment_captured`, `payment_declined`, `payment_failed`, `payment_expired`,
+and copy the signing secret into `backend/.env` as `CHECKOUT_WEBHOOK_SECRET`.
+`scripts/start-tunnel.sh` automates the tunnel side of this — run
+`scripts/start-tunnel.sh --help` for options. None of this is required to see
+the success/failure page work locally.
 
 ## Running the tests
 
@@ -75,17 +82,19 @@ frontend's calls to the backend.
 
 ## Testing a real sandbox payment
 
-1. With both servers running (and the webhook tunnel active), go to
-   http://localhost:3000/cart, add a product, and click "Proceed to checkout".
+1. With both servers running, go to http://localhost:3000/, add a product,
+   and click "Proceed to checkout".
 2. **Card:** use a Checkout.com test card (e.g. `4242 4242 4242 4242`, any
-   future expiry, any CVC) in the Flow card form.
+   future expiry, any CVC) in the Flow card form. Use a decline test card
+   (e.g. `4000 0000 0000 0002`) to see the failure path.
 3. **Apple Pay:** only appears in Safari on a device with Apple Pay set up
    (real or simulator with a sandbox tester Apple ID signed in). It also
    requires the sandbox account to have Apple Pay configured (Apple Merchant
    ID, processing certificate, domain verification) — see "Apple Pay setup"
    below.
-4. After paying, you land on `/checkout/success`, which polls the backend
-   until the webhook has updated the order's status.
+4. After paying, you land on `/checkout/success` immediately — the outcome
+   came from Flow itself, not from a poll or a webhook (see "Order status:
+   how the success page knows the outcome" above).
 
 ## Apple Pay setup (account-level, not code)
 

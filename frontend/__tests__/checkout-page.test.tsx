@@ -1,13 +1,30 @@
 // frontend/__tests__/checkout-page.test.tsx
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CheckoutPage from "../app/checkout/page";
 import * as api from "../lib/api";
 import { addItem, clearBasket } from "../lib/basket";
 
 vi.mock("../components/CheckoutFlowMount", () => ({
-  CheckoutFlowMount: ({ paymentSession }: { paymentSession: unknown }) => (
-    <div data-testid="flow-mount">{JSON.stringify(paymentSession)}</div>
+  CheckoutFlowMount: ({
+    paymentSession,
+    onPaymentCompleted,
+    onPaymentDeclined,
+  }: {
+    paymentSession: unknown;
+    onPaymentCompleted: (paymentId: string) => void;
+    onPaymentDeclined: (paymentId: string, reason?: string) => void;
+  }) => (
+    <div data-testid="flow-mount">
+      {JSON.stringify(paymentSession)}
+      <button type="button" onClick={() => onPaymentCompleted("pay_1")}>
+        simulate approved
+      </button>
+      <button type="button" onClick={() => onPaymentDeclined("pay_2", "not_enough_funds")}>
+        simulate declined
+      </button>
+    </div>
   ),
 }));
 
@@ -63,5 +80,25 @@ describe("CheckoutPage", () => {
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/cart"));
     expect(api.createPaymentSession).not.toHaveBeenCalled();
+  });
+
+  it("redirects straight to the success outcome once Flow reports the payment approved — no polling", async () => {
+    const user = userEvent.setup();
+    render(<CheckoutPage />);
+
+    await user.click(await screen.findByRole("button", { name: /simulate approved/i }));
+
+    expect(pushMock).toHaveBeenCalledWith(expect.stringMatching(/^\/checkout\/success\?order_id=order-1&outcome=success&payment_id=pay_1$/));
+  });
+
+  it("redirects to the failure outcome with the decline reason once Flow reports the payment declined", async () => {
+    const user = userEvent.setup();
+    render(<CheckoutPage />);
+
+    await user.click(await screen.findByRole("button", { name: /simulate declined/i }));
+
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/checkout\/success\?order_id=order-1&outcome=failure&payment_id=pay_2&reason=not_enough_funds$/)
+    );
   });
 });

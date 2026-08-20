@@ -3,27 +3,31 @@
 
 import { useEffect, useRef } from "react";
 import type { Component, PaymentSessionResponse } from "@checkout.com/checkout-web-components";
+import { CheckoutRequestErrorCode } from "@checkout.com/checkout-web-components";
 
 interface Props {
   paymentSession: unknown;
   onPaymentCompleted: (paymentId: string) => void;
+  onPaymentDeclined: (paymentId: string, reason?: string) => void;
   onError: (message: string) => void;
 }
 
-export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onError }: Props) {
+export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onPaymentDeclined, onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const flowComponentRef = useRef<Component | null>(null);
   // Keep the latest callbacks in refs so the mount effect below only needs to
-  // depend on `paymentSession` — onPaymentCompleted/onError identity churn (e.g.
-  // a parent re-render after setError) must not cause Flow to be re-mounted into
-  // the same container.
+  // depend on `paymentSession` — callback identity churn (e.g. a parent
+  // re-render after setError) must not cause Flow to be re-mounted into the
+  // same container.
   const onPaymentCompletedRef = useRef(onPaymentCompleted);
+  const onPaymentDeclinedRef = useRef(onPaymentDeclined);
   const onErrorRef = useRef(onError);
 
   useEffect(() => {
     onPaymentCompletedRef.current = onPaymentCompleted;
+    onPaymentDeclinedRef.current = onPaymentDeclined;
     onErrorRef.current = onError;
-  }, [onPaymentCompleted, onError]);
+  }, [onPaymentCompleted, onPaymentDeclined, onError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,9 +39,15 @@ export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onError 
         environment: "sandbox",
         paymentSession: paymentSession as PaymentSessionResponse | undefined,
         onPaymentCompleted: (_component: unknown, paymentResponse: { id: string }) => {
+          // paymentResponse.status is always "Approved" — Flow only calls this
+          // callback for a successful payment. Declines arrive via onError.
           onPaymentCompletedRef.current(paymentResponse.id);
         },
-        onError: (_component: unknown, error: { message?: string }) => {
+        onError: (_component: unknown, error) => {
+          if (error.type === "Request" && error.code === CheckoutRequestErrorCode.PaymentRequestDeclined) {
+            onPaymentDeclinedRef.current(error.details.paymentId ?? "", error.details.requestErrorCodes?.[0]);
+            return;
+          }
           onErrorRef.current(error.message ?? "Payment failed");
         },
       });

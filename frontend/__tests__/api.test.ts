@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPaymentSession, fetchPaymentStatus, fetchProducts } from "../lib/api";
+import { createPaymentSession, fetchProducts } from "../lib/api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -34,17 +34,5 @@ describe("api client", () => {
       market: "HK",
       items: [{ product_id: "clear-case", quantity: 1 }],
     });
-  });
-
-  it("fetchPaymentStatus maps snake_case order_id to camelCase orderId", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ order_id: "order-1", status: "paid", amount: 19900, currency: "EUR" }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await fetchPaymentStatus("order-1");
-
-    expect(result).toEqual({ orderId: "order-1", status: "paid", amount: 19900, currency: "EUR" });
   });
 });
