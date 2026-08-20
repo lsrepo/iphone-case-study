@@ -32,6 +32,9 @@ function SuccessPageContent() {
   const orderId = searchParams.get("order_id");
   const outcome = searchParams.get("outcome");
   const reason = searchParams.get("reason");
+  const paymentId = searchParams.get("payment_id");
+  const status = searchParams.get("status");
+  const type = searchParams.get("type");
 
   // Flow already told the browser the outcome directly (via onPaymentCompleted
   // or onError) before redirecting here — this page just renders that outcome,
@@ -51,10 +54,19 @@ function SuccessPageContent() {
   }
 
   if (outcome === "success") {
+    const outcomeJson = JSON.stringify(
+      { order_id: orderId, payment_id: paymentId, status, type },
+      null,
+      2
+    );
+
     return (
       <main className="page page--narrow">
         <h1>Payment confirmed</h1>
         <p>Order reference: {orderId}</p>
+        <pre className="code-block">
+          <code>{outcomeJson}</code>
+        </pre>
       </main>
     );
   }

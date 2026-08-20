@@ -13,12 +13,12 @@ vi.mock("../components/CheckoutFlowMount", () => ({
     onPaymentDeclined,
   }: {
     paymentSession: unknown;
-    onPaymentCompleted: (paymentId: string) => void;
+    onPaymentCompleted: (payment: { id: string; status: string; type: string }) => void;
     onPaymentDeclined: (paymentId: string, reason?: string) => void;
   }) => (
     <div data-testid="flow-mount">
       {JSON.stringify(paymentSession)}
-      <button type="button" onClick={() => onPaymentCompleted("pay_1")}>
+      <button type="button" onClick={() => onPaymentCompleted({ id: "pay_1", status: "Approved", type: "card" })}>
         simulate approved
       </button>
       <button type="button" onClick={() => onPaymentDeclined("pay_2", "not_enough_funds")}>
@@ -88,7 +88,9 @@ describe("CheckoutPage", () => {
 
     await user.click(await screen.findByRole("button", { name: /simulate approved/i }));
 
-    expect(pushMock).toHaveBeenCalledWith(expect.stringMatching(/^\/checkout\/success\?order_id=order-1&outcome=success&payment_id=pay_1$/));
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/checkout\/success\?order_id=order-1&outcome=success&payment_id=pay_1&status=Approved&type=card$/)
+    );
   });
 
   it("redirects to the failure outcome with the decline reason once Flow reports the payment declined", async () => {

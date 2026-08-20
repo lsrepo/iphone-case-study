@@ -2,12 +2,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Component, PaymentSessionResponse } from "@checkout.com/checkout-web-components";
+import type { Component, PayPaymentSessionSuccessfulResponse, PaymentSessionResponse } from "@checkout.com/checkout-web-components";
 import { CheckoutRequestErrorCode } from "@checkout.com/checkout-web-components";
 
 interface Props {
   paymentSession: unknown;
-  onPaymentCompleted: (paymentId: string) => void;
+  onPaymentCompleted: (payment: PayPaymentSessionSuccessfulResponse) => void;
   onPaymentDeclined: (paymentId: string, reason?: string) => void;
   onError: (message: string) => void;
 }
@@ -38,10 +38,10 @@ export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onPaymen
         publicKey: process.env.NEXT_PUBLIC_CHECKOUT_COM_PUBLIC_KEY!,
         environment: "sandbox",
         paymentSession: paymentSession as PaymentSessionResponse | undefined,
-        onPaymentCompleted: (_component: unknown, paymentResponse: { id: string }) => {
+        onPaymentCompleted: (_component: unknown, paymentResponse: PayPaymentSessionSuccessfulResponse) => {
           // paymentResponse.status is always "Approved" — Flow only calls this
           // callback for a successful payment. Declines arrive via onError.
-          onPaymentCompletedRef.current(paymentResponse.id);
+          onPaymentCompletedRef.current(paymentResponse);
         },
         onError: (_component: unknown, error) => {
           if (error.type === "Request" && error.code === CheckoutRequestErrorCode.PaymentRequestDeclined) {

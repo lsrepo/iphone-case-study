@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { PayPaymentSessionSuccessfulResponse } from "@checkout.com/checkout-web-components";
 import { CheckoutFlowMount } from "../../components/CheckoutFlowMount";
 import { createPaymentSession, fetchProducts } from "../../lib/api";
 import { getBasket } from "../../lib/basket";
@@ -53,15 +54,23 @@ export default function CheckoutPage() {
   // Stable identity across re-renders (e.g. when setError fires after a declined
   // card) so CheckoutFlowMount's effect doesn't see a "new" callback and re-run,
   // which would otherwise re-mount Flow into the same container on every error.
-  const handlePaymentCompleted = useCallback((paymentId: string) => {
-    const orderId = window.sessionStorage.getItem("orderId");
-    routerRef.current.push(`/checkout/success?order_id=${orderId}&outcome=success&payment_id=${paymentId}`);
+  const handlePaymentCompleted = useCallback((payment: PayPaymentSessionSuccessfulResponse) => {
+    const orderId = window.sessionStorage.getItem("orderId") ?? "";
+    const params = new URLSearchParams({
+      order_id: orderId,
+      outcome: "success",
+      payment_id: payment.id,
+      status: payment.status,
+      type: payment.type,
+    });
+    routerRef.current.push(`/checkout/success?${params.toString()}`);
   }, []);
 
   const handlePaymentDeclined = useCallback((paymentId: string, reason?: string) => {
-    const orderId = window.sessionStorage.getItem("orderId");
-    const reasonParam = reason ? `&reason=${encodeURIComponent(reason)}` : "";
-    routerRef.current.push(`/checkout/success?order_id=${orderId}&outcome=failure&payment_id=${paymentId}${reasonParam}`);
+    const orderId = window.sessionStorage.getItem("orderId") ?? "";
+    const params = new URLSearchParams({ order_id: orderId, outcome: "failure", payment_id: paymentId });
+    if (reason) params.set("reason", reason);
+    routerRef.current.push(`/checkout/success?${params.toString()}`);
   }, []);
 
   const handleFlowError = useCallback((message: string) => {

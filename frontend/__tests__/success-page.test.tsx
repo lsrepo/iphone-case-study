@@ -21,7 +21,20 @@ describe("SuccessPage", () => {
     render(<SuccessPage />);
 
     expect(await screen.findByText(/payment confirmed/i)).toBeInTheDocument();
-    expect(screen.getByText(/order-1/)).toBeInTheDocument();
+    expect(screen.getByText("Order reference: order-1")).toBeInTheDocument();
+  });
+
+  it("shows the payment outcome as formatted JSON", async () => {
+    mockSearchParams.value = "order_id=order-1&outcome=success&payment_id=pay_1&status=Approved&type=card";
+
+    render(<SuccessPage />);
+
+    await screen.findByText(/payment confirmed/i);
+    expect(screen.getByText((_, element) => element?.tagName === "CODE" && element.textContent === JSON.stringify(
+      { order_id: "order-1", payment_id: "pay_1", status: "Approved", type: "card" },
+      null,
+      2
+    ))).toBeInTheDocument();
   });
 
   it("clears the basket once the outcome is success", async () => {
