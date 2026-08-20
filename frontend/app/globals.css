@@ -197,6 +197,41 @@ button:disabled {
   margin-bottom: 1.5rem;
 }
 
+.checkout-details-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  background: var(--color-surface);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-field label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.form-field input,
+.form-field select {
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  font-size: 0.9rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.checkout-details-form button[type="submit"] {
+  align-self: flex-start;
+}
+
 .test-card-picker {
   border: 1px solid var(--color-border);
   border-radius: 4px;

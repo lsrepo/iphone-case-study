@@ -20,6 +20,8 @@ def test_create_payment_session_recalculates_amount_server_side():
         json={
             "market": "HK",
             "items": [{"product_id": "silicone-case-sage", "quantity": 2}],
+            "customer_name": "Jordan Smith",
+            "customer_email": "jordan.smith@example.com",
         },
     )
 
@@ -35,13 +37,19 @@ def test_create_payment_session_recalculates_amount_server_side():
     assert payload["amount"] == 50000  # 2 x 25000, never trusts a client-sent amount
     assert payload["currency"] == "HKD"
     assert payload["reference"] == body["order_id"]
+    assert payload["customer"] == {"name": "Jordan Smith", "email": "jordan.smith@example.com"}
 
 
 @respx.mock
 def test_create_payment_session_rejects_unknown_product():
     response = client.post(
         "/api/payment-sessions",
-        json={"market": "HK", "items": [{"product_id": "not-a-product", "quantity": 1}]},
+        json={
+            "market": "HK",
+            "items": [{"product_id": "not-a-product", "quantity": 1}],
+            "customer_name": "Jordan Smith",
+            "customer_email": "jordan.smith@example.com",
+        },
     )
     assert response.status_code == 400
 
@@ -50,9 +58,23 @@ def test_create_payment_session_rejects_unknown_product():
 def test_create_payment_session_rejects_empty_basket():
     response = client.post(
         "/api/payment-sessions",
-        json={"market": "HK", "items": []},
+        json={"market": "HK", "items": [], "customer_name": "Jordan Smith", "customer_email": "jordan.smith@example.com"},
     )
     assert response.status_code == 400
+
+
+@respx.mock
+def test_create_payment_session_rejects_invalid_email():
+    response = client.post(
+        "/api/payment-sessions",
+        json={
+            "market": "HK",
+            "items": [{"product_id": "silicone-case-sage", "quantity": 1}],
+            "customer_name": "Jordan Smith",
+            "customer_email": "not-an-email",
+        },
+    )
+    assert response.status_code == 422
 
 
 @respx.mock
@@ -67,6 +89,8 @@ def test_create_payment_session_returns_502_when_checkout_com_rejects_request():
         json={
             "market": "HK",
             "items": [{"product_id": "silicone-case-sage", "quantity": 2}],
+            "customer_name": "Jordan Smith",
+            "customer_email": "jordan.smith@example.com",
         },
     )
 

@@ -1,7 +1,7 @@
 // frontend/app/checkout/page.tsx
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { PayPaymentSessionSuccessfulResponse } from "@checkout.com/checkout-web-components";
 import { CheckoutFlowMount } from "../../components/CheckoutFlowMount";
@@ -9,8 +9,9 @@ import { TestCardPicker } from "../../components/TestCardPicker";
 import { createPaymentSession, fetchProducts } from "../../lib/api";
 import { getBasket } from "../../lib/basket";
 import { getMarket } from "../../lib/market";
+import { FLOW_LOCALES } from "../../lib/locales";
 import { formatPrice } from "../../components/ProductCard";
-import type { BasketLine, Product } from "../../lib/types";
+import type { BasketLine, Market, Product } from "../../lib/types";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -19,13 +20,18 @@ export default function CheckoutPage() {
   // trivially stable (empty dep array) regardless of what useRouter() returns.
   const routerRef = useRef(router);
   routerRef.current = router;
+  const [market, setMarketState] = useState<Market>("HK");
   const [products, setProducts] = useState<Product[]>([]);
   const [basket, setBasket] = useState<BasketLine[]>([]);
   const [paymentSession, setPaymentSession] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [locale, setLocale] = useState(FLOW_LOCALES[0].code);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const market = getMarket();
+    const currentMarket = getMarket();
     const currentBasket = getBasket();
 
     if (currentBasket.length === 0) {
@@ -33,17 +39,10 @@ export default function CheckoutPage() {
       return;
     }
 
+    setMarketState(currentMarket);
     setBasket(currentBasket);
 
-    fetchProducts(market).then(setProducts).catch(() => setError("Couldn't load your basket"));
-
-    createPaymentSession(market, currentBasket)
-      .then(({ orderId, paymentSession }) => {
-        setPaymentSession(paymentSession);
-        window.sessionStorage.setItem("orderId", orderId);
-      })
-      .catch(() => setError("Couldn't start checkout — please try again"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchProducts(currentMarket).then(setProducts).catch(() => setError("Couldn't load your basket"));
   }, []);
 
   const total = basket.reduce((sum, line) => {
@@ -51,6 +50,21 @@ export default function CheckoutPage() {
     return product ? sum + product.price * line.quantity : sum;
   }, 0);
   const currency = products[0]?.currency ?? "";
+
+  async function handleDetailsSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const { orderId, paymentSession } = await createPaymentSession(market, basket, customerName, customerEmail);
+      setPaymentSession(paymentSession);
+      window.sessionStorage.setItem("orderId", orderId);
+    } catch {
+      setError("Couldn't start checkout — please try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   // Stable identity across re-renders (e.g. when setError fires after a declined
   // card) so CheckoutFlowMount's effect doesn't see a "new" callback and re-run,
@@ -87,14 +101,57 @@ export default function CheckoutPage() {
           {error}
         </p>
       )}
-      <TestCardPicker />
-      {Boolean(paymentSession) && (
-        <CheckoutFlowMount
-          paymentSession={paymentSession}
-          onPaymentCompleted={handlePaymentCompleted}
-          onPaymentDeclined={handlePaymentDeclined}
-          onError={handleFlowError}
-        />
+      {paymentSession ? (
+        <>
+          <TestCardPicker />
+          <CheckoutFlowMount
+            paymentSession={paymentSession}
+            customerName={customerName}
+            customerEmail={customerEmail}
+            locale={locale}
+            onPaymentCompleted={handlePaymentCompleted}
+            onPaymentDeclined={handlePaymentDeclined}
+            onError={handleFlowError}
+          />
+        </>
+      ) : (
+        <form className="checkout-details-form" onSubmit={handleDetailsSubmit}>
+          <div className="form-field">
+            <label htmlFor="customer-name">Full name</label>
+            <input
+              id="customer-name"
+              type="text"
+              required
+              value={customerName}
+              onChange={(event) => setCustomerName(event.target.value)}
+              placeholder="Jordan Smith"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="customer-email">Email address</label>
+            <input
+              id="customer-email"
+              type="email"
+              required
+              value={customerEmail}
+              onChange={(event) => setCustomerEmail(event.target.value)}
+              placeholder="jordan.smith@email.com"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="checkout-locale">Payment form language</label>
+            <select id="checkout-locale" value={locale} onChange={(event) => setLocale(event.target.value)}>
+              {FLOW_LOCALES.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" disabled={submitting}>
+            {submitting ? "Loading…" : "Continue to payment"}
+          </button>
+        </form>
       )}
     </main>
   );

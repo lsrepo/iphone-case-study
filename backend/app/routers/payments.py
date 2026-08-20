@@ -44,6 +44,8 @@ async def create_payment_session(body: PaymentSessionRequest):
             currency=currency,
             country=BILLING_COUNTRY[body.market],
             reference=order_id,
+            customer_name=body.customer_name,
+            customer_email=body.customer_email,
             success_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=success",
             failure_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=failure",
         )

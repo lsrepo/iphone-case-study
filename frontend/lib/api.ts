@@ -10,7 +10,9 @@ export async function fetchProducts(market: Market): Promise<Product[]> {
 
 export async function createPaymentSession(
   market: Market,
-  items: BasketLine[]
+  items: BasketLine[],
+  customerName: string,
+  customerEmail: string
 ): Promise<{ orderId: string; paymentSession: unknown }> {
   const response = await fetch(`${API_BASE_URL}/api/payment-sessions`, {
     method: "POST",
@@ -18,6 +20,8 @@ export async function createPaymentSession(
     body: JSON.stringify({
       market,
       items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
+      customer_name: customerName,
+      customer_email: customerEmail,
     }),
   });
   if (!response.ok) throw new Error("Failed to create payment session");

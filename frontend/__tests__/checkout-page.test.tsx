@@ -1,6 +1,6 @@
 // frontend/__tests__/checkout-page.test.tsx
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CheckoutPage from "../app/checkout/page";
 import * as api from "../lib/api";
@@ -44,6 +44,12 @@ const PRODUCTS = [
   { id: "clear-case", name: "Clear Case", description: "", image: "", price: 19900, currency: "EUR" as const },
 ];
 
+async function fillAndSubmitDetails(user: UserEvent) {
+  await user.type(screen.getByLabelText(/full name/i), "Jordan Smith");
+  await user.type(screen.getByLabelText(/email address/i), "jordan.smith@example.com");
+  await user.click(screen.getByRole("button", { name: /continue to payment/i }));
+}
+
 beforeEach(() => {
   localStorage.clear();
   clearBasket();
@@ -57,18 +63,36 @@ beforeEach(() => {
 });
 
 describe("CheckoutPage", () => {
-  it("shows the basket total and mounts Flow once the session is created", async () => {
+  it("shows the basket total before any details are entered", async () => {
     render(<CheckoutPage />);
 
     await waitFor(() => expect(screen.getByText(/199\.00/)).toBeInTheDocument());
-    expect(api.createPaymentSession).toHaveBeenCalledWith("HK", [{ productId: "clear-case", quantity: 1 }]);
+    expect(api.createPaymentSession).not.toHaveBeenCalled();
+  });
+
+  it("creates the payment session with the entered name and email, then mounts Flow", async () => {
+    const user = userEvent.setup();
+    render(<CheckoutPage />);
+
+    await waitFor(() => expect(screen.getByText(/199\.00/)).toBeInTheDocument());
+    await fillAndSubmitDetails(user);
+
+    expect(api.createPaymentSession).toHaveBeenCalledWith(
+      "HK",
+      [{ productId: "clear-case", quantity: 1 }],
+      "Jordan Smith",
+      "jordan.smith@example.com"
+    );
     expect(await screen.findByTestId("flow-mount")).toHaveTextContent('{"id":"ps_1"}');
   });
 
   it("shows an error message when session creation fails", async () => {
     vi.spyOn(api, "createPaymentSession").mockRejectedValue(new Error("network error"));
-
+    const user = userEvent.setup();
     render(<CheckoutPage />);
+
+    await waitFor(() => expect(screen.getByText(/199\.00/)).toBeInTheDocument());
+    await fillAndSubmitDetails(user);
 
     expect(await screen.findByText(/couldn't start checkout/i)).toBeInTheDocument();
   });
@@ -86,6 +110,8 @@ describe("CheckoutPage", () => {
     const user = userEvent.setup();
     render(<CheckoutPage />);
 
+    await waitFor(() => expect(screen.getByText(/199\.00/)).toBeInTheDocument());
+    await fillAndSubmitDetails(user);
     await user.click(await screen.findByRole("button", { name: /simulate approved/i }));
 
     expect(pushMock).toHaveBeenCalledWith(
@@ -97,6 +123,8 @@ describe("CheckoutPage", () => {
     const user = userEvent.setup();
     render(<CheckoutPage />);
 
+    await waitFor(() => expect(screen.getByText(/199\.00/)).toBeInTheDocument());
+    await fillAndSubmitDetails(user);
     await user.click(await screen.findByRole("button", { name: /simulate declined/i }));
 
     expect(pushMock).toHaveBeenCalledWith(

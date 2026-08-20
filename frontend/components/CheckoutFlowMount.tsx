@@ -7,12 +7,23 @@ import { CheckoutRequestErrorCode } from "@checkout.com/checkout-web-components"
 
 interface Props {
   paymentSession: unknown;
+  customerName: string;
+  customerEmail: string;
+  locale: string;
   onPaymentCompleted: (payment: PayPaymentSessionSuccessfulResponse) => void;
   onPaymentDeclined: (paymentId: string, reason?: string) => void;
   onError: (message: string) => void;
 }
 
-export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onPaymentDeclined, onError }: Props) {
+export function CheckoutFlowMount({
+  paymentSession,
+  customerName,
+  customerEmail,
+  locale,
+  onPaymentCompleted,
+  onPaymentDeclined,
+  onError,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const flowComponentRef = useRef<Component | null>(null);
   // Keep the latest callbacks in refs so the mount effect below only needs to
@@ -38,6 +49,7 @@ export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onPaymen
         publicKey: process.env.NEXT_PUBLIC_CHECKOUT_COM_PUBLIC_KEY!,
         environment: "sandbox",
         paymentSession: paymentSession as PaymentSessionResponse | undefined,
+        locale,
         onPaymentCompleted: (_component: unknown, paymentResponse: PayPaymentSessionSuccessfulResponse) => {
           // paymentResponse.status is always "Approved" — Flow only calls this
           // callback for a successful payment. Declines arrive via onError.
@@ -53,7 +65,7 @@ export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onPaymen
       });
 
       if (cancelled || !containerRef.current) return;
-      const flowComponent = checkout.create("flow");
+      const flowComponent = checkout.create("flow", { data: { cardholderName: customerName, email: customerEmail } });
       flowComponent.mount(containerRef.current);
       flowComponentRef.current = flowComponent;
     }

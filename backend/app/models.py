@@ -11,9 +11,14 @@ class BasketItem(BaseModel):
     quantity: int = Field(gt=0)
 
 
+EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+
 class PaymentSessionRequest(BaseModel):
     market: Market
     items: list[BasketItem]
+    customer_name: str = Field(min_length=1, max_length=200)
+    customer_email: str = Field(pattern=EMAIL_PATTERN, max_length=200)
 
 
 class PaymentSessionResponse(BaseModel):
