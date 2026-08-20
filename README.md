@@ -47,12 +47,18 @@ Open http://localhost:3000 — it redirects to `/cart`.
 ### 3. Webhooks (needed for order status to update)
 
 Checkout.com needs to reach `POST /api/webhooks/checkout` on your backend. For
-local development, expose it with a tunnel (e.g. `ngrok http 8000`) and add
+local development, expose it with a tunnel and add
 `https://<your-tunnel>/api/webhooks/checkout` as a webhook endpoint in the
 Checkout.com sandbox Dashboard, subscribed to at least: `payment_approved`,
 `payment_captured`, `payment_declined`, `payment_failed`, `payment_expired`.
 Copy the webhook's signing secret into `backend/.env` as
 `CHECKOUT_WEBHOOK_SECRET`.
+
+`scripts/start-tunnel.sh` automates the tunnel side of this: it starts ngrok
+for the backend (and the frontend, for Apple Pay), prints both HTTPS URLs, and
+can write them straight into your `.env` files with `--update-env`. Requires
+`ngrok` installed and authenticated once (`ngrok config add-authtoken ...`).
+Run `scripts/start-tunnel.sh --help` for options.
 
 If you're also tunneling the *frontend* (e.g. for Apple Pay testing, see
 below), update `FRONTEND_BASE_URL` in `backend/.env` and
