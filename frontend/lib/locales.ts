@@ -10,7 +10,10 @@ export interface FlowLocale {
 
 export const FLOW_LOCALES: FlowLocale[] = [
   { code: "en", label: "English" },
-  { code: "zh-hk", label: "繁體中文 (香港)" },
+  // Checkout.com's own docs list this as "zh-hk" (lowercase), but the SDK only
+  // translates it with the region capitalized — verified by mounting Flow
+  // directly with each casing and comparing the rendered label.
+  { code: "zh-HK", label: "繁體中文 (香港)" },
   { code: "nl", label: "Nederlands" },
   { code: "fr", label: "Français" },
   { code: "ja", label: "日本語" },
