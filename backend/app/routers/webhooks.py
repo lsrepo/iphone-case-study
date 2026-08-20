@@ -20,7 +20,7 @@ STATUS_BY_EVENT = {
 
 def _verify_signature(raw_body: bytes, signature: str, secret: str) -> bool:
     expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature)
+    return hmac.compare_digest(expected.encode(), signature.encode())
 
 
 @router.post("/api/webhooks/checkout")

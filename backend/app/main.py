@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import get_settings
 from app.routers import payments, products, webhooks
 
 app = FastAPI(title="iPhone Case Study Checkout API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[get_settings().frontend_base_url],
     allow_methods=["*"],
     allow_headers=["*"],
 )

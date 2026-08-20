@@ -44,3 +44,32 @@ def test_create_payment_session_rejects_unknown_product():
         json={"market": "HK", "items": [{"product_id": "not-a-product", "quantity": 1}]},
     )
     assert response.status_code == 400
+
+
+@respx.mock
+def test_create_payment_session_rejects_empty_basket():
+    response = client.post(
+        "/api/payment-sessions",
+        json={"market": "HK", "items": []},
+    )
+    assert response.status_code == 400
+
+
+@respx.mock
+def test_create_payment_session_returns_502_when_checkout_com_rejects_request():
+    settings = get_settings()
+    respx.post(f"{settings.checkout_api_base_url}/payment-sessions").mock(
+        return_value=Response(422, json={"error_type": "request_invalid", "error_codes": ["amount_invalid"]})
+    )
+
+    response = client.post(
+        "/api/payment-sessions",
+        json={
+            "market": "HK",
+            "items": [{"product_id": "silicone-case-sage", "quantity": 2}],
+        },
+    )
+
+    assert response.status_code == 502
+    # the raw Checkout.com error body must not leak to the client
+    assert "amount_invalid" not in response.text

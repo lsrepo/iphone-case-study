@@ -1,5 +1,7 @@
+import logging
 import uuid
 
+import httpx
 from fastapi import APIRouter, HTTPException
 
 from app.checkout_client import CheckoutComClient
@@ -10,12 +12,17 @@ from app.products import MARKET_CURRENCY, get_product_price
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
+
 BILLING_COUNTRY = {"HK": "HK", "NL": "NL"}
 
 
 @router.post("/api/payment-sessions", status_code=201, response_model=PaymentSessionResponse)
 async def create_payment_session(body: PaymentSessionRequest):
     settings = get_settings()
+
+    if not body.items:
+        raise HTTPException(status_code=400, detail="Basket must contain at least one item")
 
     try:
         amount = sum(get_product_price(item.product_id, body.market) * item.quantity for item in body.items)
@@ -31,14 +38,22 @@ async def create_payment_session(body: PaymentSessionRequest):
         base_url=settings.checkout_api_base_url,
         processing_channel_id=settings.checkout_processing_channel_id,
     )
-    payment_session = await client.create_payment_session(
-        amount=amount,
-        currency=currency,
-        country=BILLING_COUNTRY[body.market],
-        reference=order_id,
-        success_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=success",
-        failure_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=failure",
-    )
+    try:
+        payment_session = await client.create_payment_session(
+            amount=amount,
+            currency=currency,
+            country=BILLING_COUNTRY[body.market],
+            reference=order_id,
+            success_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=success",
+            failure_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=failure",
+        )
+    except httpx.HTTPStatusError as exc:
+        logger.error(
+            "Checkout.com payment session creation failed: status=%s body=%s",
+            exc.response.status_code,
+            exc.response.text,
+        )
+        raise HTTPException(status_code=502, detail="Failed to create payment session with Checkout.com") from exc
 
     return PaymentSessionResponse(order_id=order_id, payment_session=payment_session)
 
