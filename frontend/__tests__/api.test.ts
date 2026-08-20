@@ -28,13 +28,14 @@ describe("api client", () => {
 
     const result = await createPaymentSession("HK", [{ productId: "clear-case", quantity: 1 }], "Jordan Smith", "jordan@example.com");
 
-    expect(result).toEqual({ orderId: "order-1", paymentSession: { id: "ps_1" } });
-    const [, requestInit] = fetchMock.mock.calls[0];
-    expect(JSON.parse(requestInit.body)).toEqual({
+    const expectedRequestBody = {
       market: "HK",
       items: [{ product_id: "clear-case", quantity: 1 }],
       customer_name: "Jordan Smith",
       customer_email: "jordan@example.com",
-    });
+    };
+    expect(result).toEqual({ orderId: "order-1", paymentSession: { id: "ps_1" }, requestBody: expectedRequestBody });
+    const [, requestInit] = fetchMock.mock.calls[0];
+    expect(JSON.parse(requestInit.body)).toEqual(expectedRequestBody);
   });
 });

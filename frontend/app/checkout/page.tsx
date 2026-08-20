@@ -9,7 +9,7 @@ import { TestCardPicker } from "../../components/TestCardPicker";
 import { createPaymentSession, fetchProducts } from "../../lib/api";
 import { getBasket } from "../../lib/basket";
 import { getMarket } from "../../lib/market";
-import { FLOW_LOCALES } from "../../lib/locales";
+import { MARKET_LOCALES } from "../../lib/locales";
 import { formatPrice } from "../../components/ProductCard";
 import type { BasketLine, Market, Product } from "../../lib/types";
 
@@ -25,9 +25,10 @@ export default function CheckoutPage() {
   const [basket, setBasket] = useState<BasketLine[]>([]);
   const [paymentSession, setPaymentSession] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [locale, setLocale] = useState(FLOW_LOCALES[0].code);
+  // Prefilled with demo defaults so the checkout flow can be run without
+  // typing anything — this is a sandbox demo, not a real storefront.
+  const [customerName, setCustomerName] = useState("Jordan Smith");
+  const [customerEmail, setCustomerEmail] = useState("jordan.smith@email.com");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -50,15 +51,17 @@ export default function CheckoutPage() {
     return product ? sum + product.price * line.quantity : sum;
   }, 0);
   const currency = products[0]?.currency ?? "";
+  const locale = MARKET_LOCALES[market];
 
   async function handleDetailsSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      const { orderId, paymentSession } = await createPaymentSession(market, basket, customerName, customerEmail);
+      const { orderId, paymentSession, requestBody } = await createPaymentSession(market, basket, customerName, customerEmail);
       setPaymentSession(paymentSession);
       window.sessionStorage.setItem("orderId", orderId);
+      window.sessionStorage.setItem("paymentRequest", JSON.stringify(requestBody));
     } catch {
       setError("Couldn't start checkout — please try again");
     } finally {
@@ -137,16 +140,6 @@ export default function CheckoutPage() {
               onChange={(event) => setCustomerEmail(event.target.value)}
               placeholder="jordan.smith@email.com"
             />
-          </div>
-          <div className="form-field">
-            <label htmlFor="checkout-locale">Payment form language</label>
-            <select id="checkout-locale" value={locale} onChange={(event) => setLocale(event.target.value)}>
-              {FLOW_LOCALES.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
           </div>
           <button type="submit" disabled={submitting}>
             {submitting ? "Loading…" : "Continue to payment"}

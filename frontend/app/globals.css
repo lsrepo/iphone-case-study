@@ -302,12 +302,20 @@ button:disabled {
   font-size: 0.75rem;
 }
 
+.code-block-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 2rem 0 0.5rem;
+}
+
 .code-block {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 1.25rem;
-  margin-top: 2rem;
+  margin: 0;
   overflow-x: auto;
 }
 

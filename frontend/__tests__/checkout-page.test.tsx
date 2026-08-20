@@ -45,13 +45,18 @@ const PRODUCTS = [
 ];
 
 async function fillAndSubmitDetails(user: UserEvent) {
+  // Fields carry demo defaults already — clear before typing so the test
+  // isn't order-dependent on what those defaults happen to be.
+  await user.clear(screen.getByLabelText(/full name/i));
   await user.type(screen.getByLabelText(/full name/i), "Jordan Smith");
+  await user.clear(screen.getByLabelText(/email address/i));
   await user.type(screen.getByLabelText(/email address/i), "jordan.smith@example.com");
   await user.click(screen.getByRole("button", { name: /continue to payment/i }));
 }
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   clearBasket();
   addItem("clear-case");
   pushMock.mockClear();
@@ -59,6 +64,12 @@ beforeEach(() => {
   vi.spyOn(api, "createPaymentSession").mockResolvedValue({
     orderId: "order-1",
     paymentSession: { id: "ps_1" },
+    requestBody: {
+      market: "HK",
+      items: [{ product_id: "clear-case", quantity: 1 }],
+      customer_name: "Jordan Smith",
+      customer_email: "jordan.smith@example.com",
+    },
   });
 });
 
@@ -84,6 +95,12 @@ describe("CheckoutPage", () => {
       "jordan.smith@example.com"
     );
     expect(await screen.findByTestId("flow-mount")).toHaveTextContent('{"id":"ps_1"}');
+    expect(JSON.parse(window.sessionStorage.getItem("paymentRequest") ?? "null")).toEqual({
+      market: "HK",
+      items: [{ product_id: "clear-case", quantity: 1 }],
+      customer_name: "Jordan Smith",
+      customer_email: "jordan.smith@example.com",
+    });
   });
 
   it("shows an error message when session creation fails", async () => {

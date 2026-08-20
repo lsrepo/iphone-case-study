@@ -1,7 +1,7 @@
 // frontend/app/checkout/success/page.tsx
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { clearBasket } from "../../../lib/basket";
@@ -35,6 +35,21 @@ function SuccessPageContent() {
   const paymentId = searchParams.get("payment_id");
   const status = searchParams.get("status");
   const type = searchParams.get("type");
+  // Read after mount, not during render — sessionStorage is only available in
+  // the browser, and reading it during render would make the server-rendered
+  // HTML (always empty) diverge from the client's first render, causing a
+  // hydration mismatch whenever a real value is actually stored.
+  const [requestJson, setRequestJson] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = window.sessionStorage.getItem("paymentRequest");
+    if (!stored) return;
+    try {
+      setRequestJson(JSON.stringify(JSON.parse(stored), null, 2));
+    } catch {
+      // Malformed stored value — just skip showing the request block.
+    }
+  }, []);
 
   // Flow already told the browser the outcome directly (via onPaymentCompleted
   // or onError) before redirecting here — this page just renders that outcome,
@@ -64,6 +79,15 @@ function SuccessPageContent() {
       <main className="page page--narrow">
         <h1>Payment confirmed</h1>
         <p>Order reference: {orderId}</p>
+        {requestJson && (
+          <>
+            <p className="code-block-label">Request</p>
+            <pre className="code-block">
+              <code>{requestJson}</code>
+            </pre>
+          </>
+        )}
+        <p className="code-block-label">Response</p>
         <pre className="code-block">
           <code>{outcomeJson}</code>
         </pre>
@@ -85,6 +109,15 @@ function SuccessPageContent() {
       <Link href="/checkout" className="button-link">
         Return to checkout
       </Link>
+      {requestJson && (
+        <>
+          <p className="code-block-label">Request</p>
+          <pre className="code-block">
+            <code>{requestJson}</code>
+          </pre>
+        </>
+      )}
+      <p className="code-block-label">Response</p>
       <pre className="code-block">
         <code>{failureJson}</code>
       </pre>

@@ -11,6 +11,7 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   mockSearchParams.value = "";
 });
 
@@ -85,6 +86,31 @@ describe("SuccessPage", () => {
 
     expect(await screen.findByText(/payment wasn't successful/i)).toBeInTheDocument();
     expect(screen.getByText(/try again with a different card/i)).toBeInTheDocument();
+  });
+
+  it("shows the payment session request as formatted JSON when it was stored at checkout", async () => {
+    const requestBody = { market: "HK", items: [{ product_id: "clear-case", quantity: 1 }] };
+    sessionStorage.setItem("paymentRequest", JSON.stringify(requestBody));
+    mockSearchParams.value = "order_id=order-1&outcome=success&payment_id=pay_1&status=Approved&type=card";
+
+    render(<SuccessPage />);
+
+    await screen.findByText(/payment confirmed/i);
+    expect(screen.getByText("Request")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) => element?.tagName === "CODE" && element.textContent === JSON.stringify(requestBody, null, 2)
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("skips the request block when nothing was stored (e.g. direct navigation)", async () => {
+    mockSearchParams.value = "order_id=order-1&outcome=success&payment_id=pay_1";
+
+    render(<SuccessPage />);
+
+    await screen.findByText(/payment confirmed/i);
+    expect(screen.queryByText("Request")).not.toBeInTheDocument();
   });
 
   it("shows an alert when the order reference is missing", async () => {
