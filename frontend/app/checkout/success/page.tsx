@@ -72,7 +72,7 @@ function SuccessPageContent() {
 
   if (status === "paid") {
     return (
-      <main>
+      <main className="page page--narrow">
         <h1>Payment confirmed</h1>
         <p>Order reference: {orderId}</p>
       </main>
@@ -81,7 +81,7 @@ function SuccessPageContent() {
 
   if (status === "timeout" || status === "error") {
     return (
-      <main>
+      <main className="page page--narrow">
         <h1>Still confirming your payment</h1>
         <p>
           We're still confirming your payment. Check your email for confirmation, or contact support if this

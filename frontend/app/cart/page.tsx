@@ -4,38 +4,42 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BasketSummary } from "../../components/BasketSummary";
-import { MarketToggle } from "../../components/MarketToggle";
-import { ProductCard } from "../../components/ProductCard";
 import { fetchProducts } from "../../lib/api";
-import { addItem, getBasket, removeItem, setQuantity } from "../../lib/basket";
-import { getMarket, setMarket } from "../../lib/market";
+import { BASKET_CHANGED_EVENT, getBasket, removeItem, setQuantity } from "../../lib/basket";
+import { getMarket, MARKET_CHANGED_EVENT } from "../../lib/market";
 import type { BasketLine, Market, Product } from "../../lib/types";
 
 export default function CartPage() {
-  const [market, setMarketState] = useState<Market>("HK");
+  const [, setMarketState] = useState<Market>("HK");
   const [products, setProducts] = useState<Product[]>([]);
   const [basket, setBasket] = useState<BasketLine[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMarketState(getMarket());
+    const currentMarket = getMarket();
+    setMarketState(currentMarket);
     setBasket(getBasket());
-  }, []);
-
-  useEffect(() => {
-    fetchProducts(market)
+    fetchProducts(currentMarket)
       .then(setProducts)
-      .catch(() => setError("Couldn't load products — please try again"));
-  }, [market]);
+      .catch(() => setError("Couldn't load your cart — please try again"));
 
-  function handleMarketChange(next: Market) {
-    setMarket(next);
-    setMarketState(next);
-  }
-
-  function handleAdd(productId: string) {
-    setBasket(addItem(productId));
-  }
+    function handleMarketChanged(event: Event) {
+      const nextMarket = (event as CustomEvent<Market>).detail;
+      setMarketState(nextMarket);
+      fetchProducts(nextMarket)
+        .then(setProducts)
+        .catch(() => setError("Couldn't load your cart — please try again"));
+    }
+    function handleBasketChanged() {
+      setBasket(getBasket());
+    }
+    window.addEventListener(MARKET_CHANGED_EVENT, handleMarketChanged);
+    window.addEventListener(BASKET_CHANGED_EVENT, handleBasketChanged);
+    return () => {
+      window.removeEventListener(MARKET_CHANGED_EVENT, handleMarketChanged);
+      window.removeEventListener(BASKET_CHANGED_EVENT, handleBasketChanged);
+    };
+  }, []);
 
   function handleSetQuantity(productId: string, quantity: number) {
     setBasket(setQuantity(productId, quantity));
@@ -48,17 +52,28 @@ export default function CartPage() {
   const isEmpty = basket.length === 0;
 
   return (
-    <main>
-      <h1>iPhone Cases</h1>
-      <MarketToggle market={market} onChange={handleMarketChange} />
-      {error && <p role="alert">{error}</p>}
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} onAdd={handleAdd} />
-      ))}
-      <BasketSummary basket={basket} products={products} onSetQuantity={handleSetQuantity} onRemove={handleRemove} />
-      <Link href="/checkout" aria-disabled={isEmpty ? "true" : "false"} onClick={(event) => isEmpty && event.preventDefault()}>
-        Proceed to checkout
-      </Link>
+    <main className="page">
+      <h1>Your Cart</h1>
+      {error && (
+        <p role="alert" className="error-text">
+          {error}
+        </p>
+      )}
+      {isEmpty ? (
+        <div className="empty-state">
+          <p>Your cart is empty.</p>
+          <Link href="/" className="button-link">
+            Continue shopping
+          </Link>
+        </div>
+      ) : (
+        <>
+          <BasketSummary basket={basket} products={products} onSetQuantity={handleSetQuantity} onRemove={handleRemove} />
+          <Link href="/checkout" className="button-link">
+            Proceed to checkout
+          </Link>
+        </>
+      )}
     </main>
   );
 }

@@ -1,16 +1,16 @@
 PRODUCTS = [
     {
         "id": "silicone-case-sage",
-        "name": "Silicone iPhone Case — Sage",
-        "description": "Soft-touch silicone case in sage green.",
-        "image": "/products/silicone-sage.png",
+        "name": "Silicone Case",
+        "description": "Soft-touch silicone, precision-molded for a slim, secure fit.",
+        "image": "/products/silicone-case.jpg",
         "prices": {"HKD": 25000, "EUR": 2500},
     },
     {
         "id": "clear-case",
-        "name": "Clear iPhone Case",
-        "description": "Slim clear case with raised bezel protection.",
-        "image": "/products/clear-case.png",
+        "name": "Leather Case",
+        "description": "Fine leather with a soft microfiber lining that ages naturally with use.",
+        "image": "/products/leather-case.jpg",
         "prices": {"HKD": 19900, "EUR": 1900},
     },
 ]

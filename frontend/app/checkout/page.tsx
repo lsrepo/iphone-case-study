@@ -63,10 +63,14 @@ export default function CheckoutPage() {
   }, []);
 
   return (
-    <main>
+    <main className="page page--narrow">
       <h1>Checkout</h1>
-      <p>Total: {formatPrice(total, currency)}</p>
-      {error && <p role="alert">{error}</p>}
+      <p className="checkout-total">Total: {formatPrice(total, currency)}</p>
+      {error && (
+        <p role="alert" className="error-text">
+          {error}
+        </p>
+      )}
       {Boolean(paymentSession) && (
         <CheckoutFlowMount paymentSession={paymentSession} onPaymentCompleted={handlePaymentCompleted} onError={handleFlowError} />
       )}

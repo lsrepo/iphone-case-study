@@ -1,6 +1,7 @@
 import type { BasketLine } from "./types";
 
 const STORAGE_KEY = "iphone-case-study:basket";
+export const BASKET_CHANGED_EVENT = "iphone-case-study:basket-changed";
 
 function readBasket(): BasketLine[] {
   if (typeof window === "undefined") return [];
@@ -11,6 +12,7 @@ function readBasket(): BasketLine[] {
 function writeBasket(basket: BasketLine[]): BasketLine[] {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(basket));
+    window.dispatchEvent(new CustomEvent<BasketLine[]>(BASKET_CHANGED_EVENT, { detail: basket }));
   }
   return basket;
 }

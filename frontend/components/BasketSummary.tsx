@@ -18,23 +18,33 @@ export function BasketSummary({ basket, products, onSetQuantity, onRemove }: Pro
   const currency = products[0]?.currency ?? "";
 
   return (
-    <div>
-      {lines.map(({ line, product }) => (
-        <div key={product.id}>
-          <span>{product.name}</span>
-          <input
-            type="number"
-            min={1}
-            value={line.quantity}
-            onChange={(event) => onSetQuantity(product.id, Number(event.target.value))}
-            aria-label={`Quantity for ${product.name}`}
-          />
-          <button type="button" onClick={() => onRemove(product.id)}>
-            Remove
-          </button>
-        </div>
-      ))}
-      <p>Total: {formatPrice(total, currency)}</p>
+    <div className="basket-summary">
+      <ul className="basket-list">
+        {lines.map(({ line, product }) => (
+          <li key={product.id} className="basket-line">
+            <img src={product.image} alt="" className="basket-line-image" />
+            <div className="basket-line-details">
+              <span className="basket-line-name">{product.name}</span>
+              <span className="basket-line-price">{formatPrice(product.price, product.currency)}</span>
+            </div>
+            <input
+              type="number"
+              min={1}
+              value={line.quantity}
+              onChange={(event) => onSetQuantity(product.id, Number(event.target.value))}
+              aria-label={`Quantity for ${product.name}`}
+              className="basket-line-quantity"
+            />
+            <button type="button" className="basket-line-remove" onClick={() => onRemove(product.id)}>
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="basket-total">
+        <span>Total</span>
+        <span>{formatPrice(total, currency)}</span>
+      </p>
     </div>
   );
 }
