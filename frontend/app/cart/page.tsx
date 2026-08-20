@@ -15,6 +15,7 @@ export default function CartPage() {
   const [market, setMarketState] = useState<Market>("HK");
   const [products, setProducts] = useState<Product[]>([]);
   const [basket, setBasket] = useState<BasketLine[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMarketState(getMarket());
@@ -22,7 +23,9 @@ export default function CartPage() {
   }, []);
 
   useEffect(() => {
-    fetchProducts(market).then(setProducts);
+    fetchProducts(market)
+      .then(setProducts)
+      .catch(() => setError("Couldn't load products — please try again"));
   }, [market]);
 
   function handleMarketChange(next: Market) {
@@ -48,11 +51,12 @@ export default function CartPage() {
     <main>
       <h1>iPhone Cases</h1>
       <MarketToggle market={market} onChange={handleMarketChange} />
+      {error && <p role="alert">{error}</p>}
       {products.map((product) => (
         <ProductCard key={product.id} product={product} onAdd={handleAdd} />
       ))}
       <BasketSummary basket={basket} products={products} onSetQuantity={handleSetQuantity} onRemove={handleRemove} />
-      <Link href="/checkout" aria-disabled={!isEmpty ? "false" : "true"} onClick={(event) => isEmpty && event.preventDefault()}>
+      <Link href="/checkout" aria-disabled={isEmpty ? "true" : "false"} onClick={(event) => isEmpty && event.preventDefault()}>
         Proceed to checkout
       </Link>
     </main>

@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { PaymentSessionResponse } from "@checkout.com/checkout-web-components";
+import type { Component, PaymentSessionResponse } from "@checkout.com/checkout-web-components";
 
 interface Props {
   paymentSession: unknown;
@@ -12,6 +12,18 @@ interface Props {
 
 export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const flowComponentRef = useRef<Component | null>(null);
+  // Keep the latest callbacks in refs so the mount effect below only needs to
+  // depend on `paymentSession` — onPaymentCompleted/onError identity churn (e.g.
+  // a parent re-render after setError) must not cause Flow to be re-mounted into
+  // the same container.
+  const onPaymentCompletedRef = useRef(onPaymentCompleted);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onPaymentCompletedRef.current = onPaymentCompleted;
+    onErrorRef.current = onError;
+  }, [onPaymentCompleted, onError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,24 +35,27 @@ export function CheckoutFlowMount({ paymentSession, onPaymentCompleted, onError 
         environment: "sandbox",
         paymentSession: paymentSession as PaymentSessionResponse | undefined,
         onPaymentCompleted: (_component: unknown, paymentResponse: { id: string }) => {
-          onPaymentCompleted(paymentResponse.id);
+          onPaymentCompletedRef.current(paymentResponse.id);
         },
         onError: (_component: unknown, error: { message?: string }) => {
-          onError(error.message ?? "Payment failed");
+          onErrorRef.current(error.message ?? "Payment failed");
         },
       });
 
       if (cancelled || !containerRef.current) return;
       const flowComponent = checkout.create("flow");
       flowComponent.mount(containerRef.current);
+      flowComponentRef.current = flowComponent;
     }
 
-    mountFlow().catch((error) => onError(error instanceof Error ? error.message : "Failed to load payment form"));
+    mountFlow().catch((error) => onErrorRef.current(error instanceof Error ? error.message : "Failed to load payment form"));
 
     return () => {
       cancelled = true;
+      flowComponentRef.current?.unmount();
+      flowComponentRef.current = null;
     };
-  }, [paymentSession, onPaymentCompleted, onError]);
+  }, [paymentSession]);
 
   return <div ref={containerRef} id="flow-container" />;
 }

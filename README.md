@@ -54,11 +54,17 @@ Checkout.com sandbox Dashboard, subscribed to at least: `payment_approved`,
 Copy the webhook's signing secret into `backend/.env` as
 `CHECKOUT_WEBHOOK_SECRET`.
 
+If you're also tunneling the *frontend* (e.g. for Apple Pay testing, see
+below), update `FRONTEND_BASE_URL` in `backend/.env` and
+`NEXT_PUBLIC_API_BASE_URL` in `frontend/.env.local` to the tunnel's HTTPS
+URLs too — not just the webhook endpoint — otherwise CORS will block the
+frontend's calls to the backend.
+
 ## Running the tests
 
 ```bash
-cd backend && pytest
-cd frontend && npm test
+(cd backend && pytest)
+(cd frontend && npm test)
 ```
 
 ## Testing a real sandbox payment

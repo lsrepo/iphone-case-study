@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { fetchPaymentStatus } from "../../../lib/api";
+import { clearBasket } from "../../../lib/basket";
 
 export default function SuccessPage() {
   return (
@@ -24,16 +25,28 @@ function SuccessPageContent() {
     let cancelled = false;
 
     async function poll() {
+      let lastAttemptErrored = false;
+
       for (let attempt = 0; attempt < 10; attempt += 1) {
-        const result = await fetchPaymentStatus(orderId!);
-        if (cancelled) return;
-        if (result.status !== "pending") {
-          setStatus(result.status);
-          return;
+        try {
+          const result = await fetchPaymentStatus(orderId!);
+          if (cancelled) return;
+          lastAttemptErrored = false;
+          if (result.status !== "pending") {
+            setStatus(result.status);
+            return;
+          }
+        } catch {
+          if (cancelled) return;
+          lastAttemptErrored = true;
         }
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      if (!cancelled) setStatus("pending");
+
+      // Either the poll kept erroring, or the backend genuinely still reports
+      // "pending" after the cap — neither means the payment failed, so don't
+      // reuse the decline/failure branch for this. Surface a distinct state.
+      if (!cancelled) setStatus(lastAttemptErrored ? "error" : "timeout");
     }
 
     poll();
@@ -42,6 +55,12 @@ function SuccessPageContent() {
       cancelled = true;
     };
   }, [orderId]);
+
+  useEffect(() => {
+    if (status === "paid") {
+      clearBasket();
+    }
+  }, [status]);
 
   if (!orderId) {
     return <p role="alert">Missing order reference.</p>;
@@ -55,6 +74,19 @@ function SuccessPageContent() {
     return (
       <main>
         <h1>Payment confirmed</h1>
+        <p>Order reference: {orderId}</p>
+      </main>
+    );
+  }
+
+  if (status === "timeout" || status === "error") {
+    return (
+      <main>
+        <h1>Still confirming your payment</h1>
+        <p>
+          We're still confirming your payment. Check your email for confirmation, or contact support if this
+          persists.
+        </p>
         <p>Order reference: {orderId}</p>
       </main>
     );

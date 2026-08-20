@@ -23,6 +23,12 @@ describe("basket", () => {
     expect(basket).toEqual([{ productId: "clear-case", quantity: 5 }]);
   });
 
+  it("clamps a zero or negative quantity to 1", () => {
+    addItem("clear-case");
+    expect(setQuantity("clear-case", 0)).toEqual([{ productId: "clear-case", quantity: 1 }]);
+    expect(setQuantity("clear-case", -5)).toEqual([{ productId: "clear-case", quantity: 1 }]);
+  });
+
   it("removes an item", () => {
     addItem("clear-case");
     const basket = removeItem("clear-case");

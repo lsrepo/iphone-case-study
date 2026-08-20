@@ -34,7 +34,7 @@ export function setQuantity(productId: string, quantity: number): BasketLine[] {
   const basket = readBasket();
   const existing = basket.find((line) => line.productId === productId);
   if (existing) {
-    existing.quantity = quantity;
+    existing.quantity = Math.max(1, Math.trunc(quantity) || 1);
   }
   return writeBasket(basket);
 }

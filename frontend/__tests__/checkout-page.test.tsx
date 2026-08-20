@@ -11,6 +11,18 @@ vi.mock("../components/CheckoutFlowMount", () => ({
   ),
 }));
 
+const pushMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: pushMock,
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
 const PRODUCTS = [
   { id: "clear-case", name: "Clear Case", description: "", image: "", price: 19900, currency: "EUR" as const },
 ];
@@ -19,6 +31,7 @@ beforeEach(() => {
   localStorage.clear();
   clearBasket();
   addItem("clear-case");
+  pushMock.mockClear();
   vi.spyOn(api, "fetchProducts").mockResolvedValue(PRODUCTS);
   vi.spyOn(api, "createPaymentSession").mockResolvedValue({
     orderId: "order-1",
@@ -41,5 +54,14 @@ describe("CheckoutPage", () => {
     render(<CheckoutPage />);
 
     expect(await screen.findByText(/couldn't start checkout/i)).toBeInTheDocument();
+  });
+
+  it("redirects to /cart and never creates a payment session when the basket is empty", async () => {
+    clearBasket();
+
+    render(<CheckoutPage />);
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/cart"));
+    expect(api.createPaymentSession).not.toHaveBeenCalled();
   });
 });

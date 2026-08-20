@@ -34,4 +34,12 @@ describe("CartPage", () => {
     expect(await screen.findByText(/Total:.*199\.00/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /proceed to checkout/i })).toHaveAttribute("aria-disabled", "false");
   });
+
+  it("shows an error message when fetching products fails", async () => {
+    vi.spyOn(api, "fetchProducts").mockRejectedValue(new Error("network error"));
+
+    render(<CartPage />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load products/i);
+  });
 });
