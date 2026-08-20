@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PayPaymentSessionSuccessfulResponse } from "@checkout.com/checkout-web-components";
 import { CheckoutFlowMount } from "../../components/CheckoutFlowMount";
+import { TestCardPicker } from "../../components/TestCardPicker";
 import { createPaymentSession, fetchProducts } from "../../lib/api";
 import { getBasket } from "../../lib/basket";
 import { getMarket } from "../../lib/market";
@@ -86,6 +87,7 @@ export default function CheckoutPage() {
           {error}
         </p>
       )}
+      <TestCardPicker />
       {Boolean(paymentSession) && (
         <CheckoutFlowMount
           paymentSession={paymentSession}

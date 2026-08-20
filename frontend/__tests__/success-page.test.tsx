@@ -58,6 +58,26 @@ describe("SuccessPage", () => {
     expect(screen.getByRole("link", { name: /return to checkout/i })).toHaveAttribute("href", "/checkout");
   });
 
+  it("shows the decline outcome as formatted JSON", async () => {
+    mockSearchParams.value = "order_id=order-1&outcome=failure&payment_id=pay_1&reason=not_enough_funds";
+
+    render(<SuccessPage />);
+
+    await screen.findByText(/payment wasn't successful/i);
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "CODE" &&
+          element.textContent ===
+            JSON.stringify(
+              { order_id: "order-1", payment_id: "pay_1", code: "payment_request_declined", reason: "not_enough_funds" },
+              null,
+              2
+            )
+      )
+    ).toBeInTheDocument();
+  });
+
   it("shows a generic failure message when there's no decline reason", async () => {
     mockSearchParams.value = "order_id=order-1&outcome=failure&payment_id=pay_1";
 

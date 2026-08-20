@@ -71,6 +71,12 @@ function SuccessPageContent() {
     );
   }
 
+  const failureJson = JSON.stringify(
+    { order_id: orderId, payment_id: paymentId, code: paymentId ? "payment_request_declined" : null, reason },
+    null,
+    2
+  );
+
   return (
     <main className="page page--narrow">
       <h1>Payment wasn't successful</h1>
@@ -79,6 +85,9 @@ function SuccessPageContent() {
       <Link href="/checkout" className="button-link">
         Return to checkout
       </Link>
+      <pre className="code-block">
+        <code>{failureJson}</code>
+      </pre>
     </main>
   );
 }
