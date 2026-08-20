@@ -29,3 +29,15 @@ export async function createPaymentSession(
   const body = await response.json();
   return { orderId: body.order_id, paymentSession: body.payment_session, requestBody };
 }
+
+export async function fetchPaymentStatus(orderId: string): Promise<{
+  orderId: string;
+  status: string;
+  amount: number;
+  currency: string;
+}> {
+  const response = await fetch(`${API_BASE_URL}/api/payments/${orderId}`);
+  if (!response.ok) throw new Error("Failed to fetch payment status");
+  const body = await response.json();
+  return { orderId: body.order_id, status: body.status, amount: body.amount, currency: body.currency };
+}

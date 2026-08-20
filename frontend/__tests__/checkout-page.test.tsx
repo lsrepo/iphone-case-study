@@ -1,5 +1,5 @@
 // frontend/__tests__/checkout-page.test.tsx
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CheckoutPage from "../app/checkout/page";
@@ -70,6 +70,12 @@ beforeEach(() => {
       customer_name: "Jordan Smith",
       customer_email: "jordan.smith@example.com",
     },
+  });
+  vi.spyOn(api, "fetchPaymentStatus").mockResolvedValue({
+    orderId: "order-1",
+    status: "pending",
+    amount: 19900,
+    currency: "EUR",
   });
 });
 
@@ -147,5 +153,31 @@ describe("CheckoutPage", () => {
     expect(pushMock).toHaveBeenCalledWith(
       expect.stringMatching(/^\/checkout\/success\?order_id=order-1&outcome=failure&payment_id=pay_2&reason=not_enough_funds$/)
     );
+  });
+
+  it("falls back to polling the backend once a webhook resolves the order — for payment methods with no Flow callback", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const statusMock = vi
+      .spyOn(api, "fetchPaymentStatus")
+      .mockResolvedValueOnce({ orderId: "order-1", status: "pending", amount: 19900, currency: "EUR" })
+      .mockResolvedValueOnce({ orderId: "order-1", status: "pending", amount: 19900, currency: "EUR" })
+      .mockResolvedValueOnce({ orderId: "order-1", status: "paid", amount: 19900, currency: "EUR" });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<CheckoutPage />);
+
+    await waitFor(() => expect(screen.getByText(/199\.00/)).toBeInTheDocument());
+    await fillAndSubmitDetails(user);
+
+    await vi.waitFor(() => expect(statusMock).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(pushMock).toHaveBeenCalledWith("/checkout/success?order_id=order-1&outcome=success");
+
+    vi.useRealTimers();
   });
 });

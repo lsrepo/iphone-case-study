@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { PayPaymentSessionSuccessfulResponse } from "@checkout.com/checkout-web-components";
 import { CheckoutFlowMount } from "../../components/CheckoutFlowMount";
 import { TestCardPicker } from "../../components/TestCardPicker";
-import { createPaymentSession, fetchProducts } from "../../lib/api";
+import { createPaymentSession, fetchPaymentStatus, fetchProducts } from "../../lib/api";
 import { getBasket } from "../../lib/basket";
 import { getMarket } from "../../lib/market";
 import { MARKET_LOCALES } from "../../lib/locales";
@@ -24,6 +24,7 @@ export default function CheckoutPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [basket, setBasket] = useState<BasketLine[]>([]);
   const [paymentSession, setPaymentSession] = useState<unknown>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Prefilled with demo defaults so the checkout flow can be run without
   // typing anything — this is a sandbox demo, not a real storefront.
@@ -60,6 +61,7 @@ export default function CheckoutPage() {
     try {
       const { orderId, paymentSession, requestBody } = await createPaymentSession(market, basket, customerName, customerEmail);
       setPaymentSession(paymentSession);
+      setOrderId(orderId);
       window.sessionStorage.setItem("orderId", orderId);
       window.sessionStorage.setItem("paymentRequest", JSON.stringify(requestBody));
     } catch {
@@ -94,6 +96,43 @@ export default function CheckoutPage() {
   const handleFlowError = useCallback((message: string) => {
     setError(message);
   }, []);
+
+  // Fallback for payment methods that never fire Flow's own callbacks — e.g.
+  // WeChat Pay and Alipay show a QR code the customer scans with their phone,
+  // so nothing in this page witnesses the completion the way it does for
+  // card/Apple Pay/Google Pay. The only way to learn the outcome is to poll
+  // our backend, which itself only updates once a webhook arrives. For
+  // card/wallet payments this never gets a chance to matter, since their own
+  // callback resolves and navigates away first.
+  useEffect(() => {
+    if (!orderId || !paymentSession) return;
+
+    let cancelled = false;
+
+    async function poll() {
+      for (let attempt = 0; !cancelled && attempt < 200; attempt += 1) {
+        try {
+          const result = await fetchPaymentStatus(orderId!);
+          if (cancelled) return;
+          if (result.status === "paid" || result.status === "declined" || result.status === "failed") {
+            const outcome = result.status === "paid" ? "success" : "failure";
+            const params = new URLSearchParams({ order_id: orderId!, outcome });
+            routerRef.current.push(`/checkout/success?${params.toString()}`);
+            return;
+          }
+        } catch {
+          // transient network error — keep polling
+        }
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+
+    poll();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId, paymentSession]);
 
   return (
     <main className="page page--narrow">

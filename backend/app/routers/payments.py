@@ -8,7 +8,7 @@ from app.checkout_client import CheckoutComClient
 from app.config import get_settings
 from app.models import PaymentSessionRequest, PaymentSessionResponse, PaymentStatusResponse
 from app.orders import order_store
-from app.products import MARKET_CURRENCY, get_product_price
+from app.products import MARKET_CURRENCY, get_product, get_product_price
 
 router = APIRouter()
 
@@ -33,6 +33,20 @@ async def create_payment_session(body: PaymentSessionRequest):
     order_id = str(uuid.uuid4())
     order_store.create(order_id, body.market, currency, amount, body.items)
 
+    # payment_type and items[] aren't needed for card/wallet payments, but
+    # several redirect/QR payment methods (WeChat Pay, Alipay, PayPal) require
+    # them to even be considered eligible for a session — see e.g.
+    # https://www.checkout.com/docs/payments/add-payment-methods/wechat-pay/web
+    items = [
+        {
+            "reference": item.product_id,
+            "name": get_product(item.product_id)["name"],
+            "quantity": item.quantity,
+            "unit_price": get_product_price(item.product_id, body.market),
+        }
+        for item in body.items
+    ]
+
     client = CheckoutComClient(
         secret_key=settings.checkout_secret_key,
         base_url=settings.checkout_api_base_url,
@@ -46,6 +60,7 @@ async def create_payment_session(body: PaymentSessionRequest):
             reference=order_id,
             customer_name=body.customer_name,
             customer_email=body.customer_email,
+            items=items,
             success_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=success",
             failure_url=f"{settings.frontend_base_url}/checkout/success?order_id={order_id}&outcome=failure",
         )

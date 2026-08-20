@@ -38,6 +38,10 @@ def test_create_payment_session_recalculates_amount_server_side():
     assert payload["currency"] == "HKD"
     assert payload["reference"] == body["order_id"]
     assert payload["customer"] == {"name": "Jordan Smith", "email": "jordan.smith@example.com"}
+    assert payload["payment_type"] == "Regular"
+    assert payload["items"] == [
+        {"reference": "silicone-case-sage", "name": "Silicone Case", "quantity": 2, "unit_price": 25000}
+    ]
 
 
 @respx.mock

@@ -16,6 +16,7 @@ class CheckoutComClient:
         reference: str,
         customer_name: str,
         customer_email: str,
+        items: list[dict],
         success_url: str,
         failure_url: str,
     ) -> dict:
@@ -24,8 +25,10 @@ class CheckoutComClient:
             "currency": currency,
             "reference": reference,
             "display_name": "iPhone Case Study",
+            "payment_type": "Regular",
             "billing": {"address": {"country": country}},
             "customer": {"name": customer_name, "email": customer_email},
+            "items": items,
             "success_url": success_url,
             "failure_url": failure_url,
         }

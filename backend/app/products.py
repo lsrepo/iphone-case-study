@@ -33,6 +33,13 @@ def get_products_for_market(market: str) -> list[dict]:
     ]
 
 
+def get_product(product_id: str) -> dict:
+    for product in PRODUCTS:
+        if product["id"] == product_id:
+            return product
+    raise KeyError(product_id)
+
+
 def get_product_price(product_id: str, market: str) -> int:
     currency = MARKET_CURRENCY[market]
     for product in PRODUCTS:
